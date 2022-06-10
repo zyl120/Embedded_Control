@@ -1,0 +1,74 @@
+compile directives
+    #include <studio.h>
+    #include <c8051_SDCC.h>
+    #include <stdlib.h>
+declare global variables
+    unsigned int PW_CENTER, PW_MIN, PW_MAX, PW, PCA_START, PCA_COUNTER.
+    sbit CF (PCA 0 COUNTER OVERFLOW FLAG)
+function prototypes
+    void Port_Init(void);
+    void PCA_Init(void);
+    void XBR0_Init(void);
+    void Interrupt_Init(void);
+    void Drive_Motor(void);
+    void PCA_ISR (void) __interrupt 9;
+main function
+    declare local variables
+        (NONE)
+    initialize system, ports and PCA
+        Sys_Init();
+        putchar(' ');
+        Port_Init();
+        XBR0_Init();
+        Interrupt_Init();
+        PCA_Init();
+    set PW to 1.5ms and wait for 1s.
+    reset PCA_COUNTER.
+    begin infinite loop
+        Run Drive_Motor(void) to calibrate motor speed
+    end infinite loop
+end main function
+
+Functions
+    void Port_Init()
+        set output pin for CEX0, CEX2, and CEX3 in push-pull mode.
+    End Port_Init()
+
+    void XBR0_Init()
+        configure the crossbar as directed in the lab manual.
+    End XBR0_Init()
+
+    void Interrupt_Init()
+        Enable general interrupt
+        Enable PCA overflow interrupts
+    End Interrupt_Init()
+
+    void PCA_Init()
+        Enable SYSCLK/12 and enable interrupt.
+        Enable CCM2 16bit PWM
+        Enable PCA counter
+    End PCA_Init()
+
+    void PCA_ISR() __interrupt 9
+        Increment PCA_COUNTER to count the number of overflows
+        If PCA interrupt flag is set
+            Clear the overflow flag
+            Set PCA0 to PCA_START
+        End if
+        handle other PCA interrupt sources
+    End PCA_ISR() __interrupt 9
+    
+    void Drive_Motor()
+        declare local variables
+            char input
+        wait for key stroke
+        if 'f', increase PW by 10
+            if PW > PW_MAX, limit it to PW_MAX
+        else if 'r', decrease PW by 10
+            if PW < PW_MIN, limit it to PW_MIN
+        else if another letter, give a reminder
+        update speed command
+            update lo byte of CCM 2
+            update hi byte of CCM 2
+        print PW
+    End Drive_Motor()

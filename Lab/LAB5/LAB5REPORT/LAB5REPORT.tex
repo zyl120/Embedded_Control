@@ -1,0 +1,371 @@
+\documentclass[12pt]{article}
+\usepackage{setspace}
+\usepackage[ampersand]{easylist}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{ulem}
+\usepackage{mathtools}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{sectsty}
+\usepackage{titlecaps}
+\usepackage{fancybox}
+\usepackage{times}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `basename #1 .tif`.png}
+\usepackage{color}
+\usepackage[shortlabels]{enumitem}
+\usepackage{pgfplots}
+\usepackage{filecontents}
+\usepackage[english]{babel}
+\usepackage{amsmath,amsthm}
+\usepackage{amsfonts}
+\usepackage{fontspec}
+\setmonofont[Scale=0.85]{Consolas}
+\usepgfplotslibrary{units}
+
+\doublespacing
+\sectionfont{\MakeUppercase}
+\subsectionfont{\MakeUppercase}
+\subsubsectionfont{\MakeUppercase}
+\lstset {
+    language=C,
+    rulesepcolor = \color{black}
+}
+\lstdefinestyle{customc}{
+    belowcaptionskip=1\baselineskip,
+    breaklines=true,
+    language=C,
+    showstringspaces=true,
+    basicstyle=\ttfamily,
+    keywordstyle=\bfseries\color{green!40!black},
+    commentstyle=\itshape\color{purple!40!black},
+    identifierstyle=\color{blue},
+    stringstyle=\color{orange},
+    %basicstyle=\fontsize{11}{13}\selectfont\ttfamily
+    %frame=box,
+}
+\lstset{escapechar=@,style=customc}
+\renewcommand{\footnotesize}{\fontsize{10pt}{12pt}}
+\pgfplotsset{compat=1.14, height=2.5in, width=3.4in}
+\newcommand\code[2][]{
+    \tikz[baseline=(s.base)]{
+        \node(s)[
+            rounded corners,
+            fill=black!5,        % background color
+            draw=black,          % border of box
+            text=black, % text color
+            inner xsep =3pt,    % horizontal space between text and border
+            inner ysep =0pt,    % vertical space between text and border
+            text height=2ex,    % height of box
+            text depth =1ex,    % depth of box
+            #1                  % other options
+        ]{\texttt{#2}};
+    }
+}
+
+\begin{document}
+\begin{titlepage}
+	%\centering
+	\begin{center}
+	{\scshape\LARGE{Rensselaer Polytechnic Institute}\par}
+	\vspace{3.5cm}
+	{\huge\bfseries{Laboratory 5 Report}\par}
+	\vspace{2cm}
+	{\Large\itshape{Yilu Zhou, Z Jin, Zhongqi Liu}\par}
+    {\Large\itshape{Section 02, Side 9B, 10B, 11B}\par}
+	\vfill
+	supervised by\par
+	Dr.~ Jeffrey \textsc{Braunstein}\par
+    graded by\par
+    Syed \textsc{Naqvi}
+	\vfill
+% Bottom of the page
+	{\large \today\par}
+    \end{center}
+\end{titlepage}
+\section{Introduction}
+\subsection{Purpose \& Objectives}
+The purpose of the Lab 5 is:
+\begin{enumerate}
+\item Constructing circuits and writing program base on Lab 4 programs and circuits, to control the car going straight up or down the ramp and stop by the end of the ramp, using the data from 2-axis accelerometer.
+\item Showing all necessary data on PuTTY for further study and analyzing the close-loop control.
+\item Seeing how the closed-loop feedback can control the direction and orientation of the car without outside interference.
+\end{enumerate}
+\subsection{Overview of accelerometer feedback control}
+The general control method of the car for this lab is closed-loop proportional control. By collecting real-time data from the accelerometer, the micro-controller can know the tilting of the car on both axis, and therefore, decide the next step. Commanding the car moving forward or backward, turning right or left, the micro-controller can control the car to move straight up or down the ramp depending on switch, and stop at the end of the ramp.
+\begin{enumerate}
+    \item Collecting data from both axis of the accelerometer. Since the raw data is very noisy, 4 readings were averaged and left shift 4 bits to make it usable and converted to gx and gy for further application. Example code for collecting y-axis data:
+        \begin{lstlisting}
+AVG_GX += ((ACCEL_DATA[1] << 8) >> 4);
+AVG_GY += ((ACCEL_DATA[3] << 8) >> 4);
+        \end{lstlisting}
+    \item Base on data collected, the PWM of steering servo motor and drive motor are controlled proportionally to run or stop and turn to desired direction, the end of the ramp, in this case. Here is an Example code for Servo and Drive motor:
+        \begin{lstlisting}
+STEERING_SERVO_PW = STEERING_SERVO_NEUT + KS * GX;
+DRIVE_MOTOR_PW = DRIVE_MOTOR_NEUT +/- (KDY * GY) - (KDX * abs(GX));
+        \end{lstlisting}
+        As long as either of \code{GX} or \code{GY} is not zero, the micro-controller would run the motor forward or backward. As long as \code{GX} is not zero, micro-controller would turn the steering toward the bottom of the ramp. And when both of \code{GX} and \code{GY} are zero, the micro-controller would stop the car.
+\end{enumerate}
+\newpage
+\section{Results, Plots, Analysis of Plots, \& Conclusions}
+\subsection{Verification}
+The car can perform exactly as we expected. The car is capable of moving down the ramp every time we tested. However, in the first several tests, the car cannot stop as we expected. The problem is solved and the method will be mentioned later in section \ref{QA}. Also, the car is not capable of running up the ramp without external help due to the weak power of the drive motor. This problem only happens when the slope is too small because the \code{DRIVE\_MOTOR\_PW} depends on the slope of the ramp. However, the car could stall parallel to the slope of the ramp and it will not stall when the slope is large enough to set the \code{DRIVE\_MOTOR\_PW} to \code{DRIVE\_MOTOR\_MIN}. Therefore, if the car has enough power in the drive motor, it will finish the tasks exactly to the lab guidance.\par
+When we placed the car on the ramp, we first place the car with front of the car down the ramp to minimize uncertainties. When we finished typing the gain, the car began to go down the ramp smoothly. As there was no need to change the pulse width of the steering servo, no change in direction happened when the car is moving. After the car reaches the bottom of the ramp, we change the status of slide switch 1. When it changed, the car should changed from going down the ramp to going up the ramp. However, because the car is currently horizontal to the ground at the bottom of the ramp, the car will not move unless the student pushed the car back to the ramp. After doing so, the car was capable to move up the ramp. When the car is at about the half of the ramp, the car stalled because the power of the drive motor was not enough to push the car up the ramp when the slope is large. One of us pushed the car up the ramp and the car was capable to stop at the top of the ramp. 
+
+\subsection{Plots}
+\subsubsection{Go down the ramp, \code{KS = 50}, \code{KDX = 50}, \code{KDY = 50}}
+\begin{center}
+\begin{tikzpicture}[scale = 1.25]
+% let both axes use the same layers
+\pgfplotsset{set layers}
+%
+\begin{axis}[
+scale only axis,
+xmin=1612,xmax=1700,
+axis y line*=left,
+xlabel=TIME,
+ylabel style = {align=center},
+ylabel={GX \ref{GX1} \\ GY \ref{GY1}},
+x unit=\times20ms,]
+\addplot [blue,thick]table [x=TIME, y=GX, col sep=comma] {down1.csv};
+\label{GX1}
+\addplot [green,thick]table [x=TIME, y=GY, col sep=comma] {down1.csv};
+\label{GY1}
+\end{axis}
+%
+\begin{axis}[
+scale only axis,
+xmin=1612,xmax=1700,
+axis y line*=right,
+axis x line=none,
+ylabel style = {align=center},
+ylabel={DRIVE MOTOR PW \ref{TVP1} \\ STEERING SERVO PW \ref{TVS1}},
+x unit=\times20ms
+]
+\addplot [red,thick]table [x=TIME, y=DRIVE_MOTOR_PW, col sep=comma] {down1.csv};
+\label{TVP1}
+\addplot [black,thick] table[x=TIME, y=STEERING_SERVO_PW, col sep=comma] {down1.csv};
+\label{TVS1}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+This plot shows the situation when the car goes down the ramp. Because the front of the car is pointing down the ramp, \code{GY} is negative as soon as the first data is read from the accelerometer. We place the car near the top of the ramp. Therefore, the \code{GY} is not smallest at the beginning of the plots. When the car passed through the middle of the ramp, the \code{GY} is smallest and therefore the car will move the fastest during the middle of the route. In this first experiment, we place the car nearly parallel to the slope of the ramp. Therefore, \code{GX} is close to 0 throughout the whole experiment.
+\newpage
+\subsubsection{Go up the ramp, \code{KS = 50}, \code{KDX = 50}, \code{KDY = 50}}
+\begin{center}
+\begin{tikzpicture}[scale = 1.25]
+% let both axes use the same layers
+\pgfplotsset{set layers}
+%
+\begin{axis}[
+scale only axis,
+xmin=1987,xmax=2250,
+axis y line*=left,
+xlabel=TIME,
+ylabel style = {align=center},
+ylabel={GX \ref{GX2} \\ GY \ref{GY2}},
+x unit=\times20ms
+]
+\addplot [blue,thick]table [x=TIME, y=GX, col sep=comma] {up.csv};
+\label{GX2}
+\addplot [green,thick]table [x=TIME, y=GY, col sep=comma] {up.csv};
+\label{GY2}
+\end{axis}
+%
+\begin{axis}[
+scale only axis,
+xmin=1987,xmax=2250,
+axis y line*=right,
+axis x line=none,
+ylabel style = {align=center},
+ylabel={DRIVE MOTOR PW \ref{TVP2} \\ STEERING SERVO PW \ref{TVS2}},
+x unit=\times20ms
+]
+\addplot [red,thick]table [x=TIME, y=DRIVE_MOTOR_PW, col sep=comma] {up.csv};
+\label{TVP2}
+\addplot [black,thick] table[x=TIME, y=STEERING_SERVO_PW, col sep=comma] {up.csv};
+\label{TVS2}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+In this experiment, the car is still placing down the ramp. Therefore, the \code{GY} is still negative. However, the \code{DRIVE\_MOTOR\_PW} is below \code{DRIVE\_MOTOR\_NEUT} for the reverse motion. \code{GX} is nearly 0 because the car is parallel to the slope of the ramp. Near the end of the route, because the ramp is sensitive to the pressure, the car is heading to positive slope. Therefore, \code{GY} is positive near the end of the route.
+\newpage
+\subsubsection{Go down the ramp, \code{KS = 50}, \code{KDX = 50}, \code{KDY = 50}}
+\begin{center}
+\begin{tikzpicture}[scale = 1.25]
+% let both axes use the same layers
+\pgfplotsset{set layers}
+%
+\begin{axis}[
+scale only axis,
+xmin=1277,xmax=1797,
+axis y line*=left,
+xlabel=TIME,
+ylabel style = {align=center},
+ylabel={GX \ref{GX3} \\ GY \ref{GY3}},
+x unit=\times20ms,]
+\addplot [blue,thick]table [x=TIME, y=GX, col sep=comma] {down.csv};
+\label{GX3}
+\addplot [green,thick]table [x=TIME, y=GY, col sep=comma] {down.csv};
+\label{GY3}
+\end{axis}
+%
+\begin{axis}[
+scale only axis,
+xmin=1277,xmax=1797,
+axis y line*=right,
+axis x line=none,
+ylabel style = {align=center},
+ylabel={DRIVE MOTOR PW \ref{TVP3} \\ STEERING SERVO PW \ref{TVS3}},
+x unit=\times20ms
+]
+\addplot [red,thick]table [x=TIME, y=DRIVE_MOTOR_PW, col sep=comma] {down.csv};
+\label{TVP3}
+\addplot [black,thick] table[x=TIME, y=STEERING_SERVO_PW, col sep=comma] {down.csv};
+\label{TVS3}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+This plot shows the situation when the car was on the ramp and moving horizontal across the ramp. Because the table is not perfectly horizontal, the \code{GX} and \code{GY} are not equals to zero. The car will not try to move up the ramp nor to move down the ramp at first. However, after moving for some distance, the car will choose to move upward. This situation is confusing to us at first. However, after we plot the \code{DRIVE\_MOTOR\_PW} and \code{STEERING\_SERVO\_PW}, the situation is clear that some pulse width data is not processed and it will exceed the limitation set by \code{DRIVE\_MOTOR\_MAX/MIN} and \code{STEERING\_SERVO\_LEFT/RIGHT}. The correct result is shown by plot 1 and 2.
+\newpage
+\subsubsection{Go down the ramp, \code{KS = 75}, \code{KDX = 75}, \code{KDY = 75}}
+\begin{center}
+\begin{tikzpicture}[scale = 1.25]
+% let both axes use the same layers
+\pgfplotsset{set layers}
+%
+\begin{axis}[
+scale only axis,
+xmin=974,xmax=1456,
+axis y line*=left,
+xlabel=TIME,
+ylabel style = {align=center},
+ylabel={GX \ref{GX4} \\ GY \ref{GY4}},
+x unit=\times20ms,]
+\addplot [blue,thick]table [x=TIME, y=GX, col sep=comma] {4.csv};
+\label{GX4}
+\addplot [green,thick]table [x=TIME, y=GY, col sep=comma] {4.csv};
+\label{GY4}
+\end{axis}
+%
+\begin{axis}[
+scale only axis,
+xmin=974,xmax=1456,
+axis y line*=right,
+axis x line=none,
+ylabel style = {align=center},
+ylabel={DRIVE MOTOR PW \ref{TVP4} \\ STEERING SERVO PW \ref{TVS4}},
+x unit=\times20ms
+]
+\addplot [red,thick]table [x=TIME, y=DRIVE_MOTOR_PW, col sep=comma] {4.csv};
+\label{TVP4}
+\addplot [black,thick] table[x=TIME, y=STEERING_SERVO_PW, col sep=comma] {4.csv};
+\label{TVS4}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+From this plot, we can see that the period which the car process the \code{DRIVE\_MOTOR\_PW} and \code{STEERING\_SERVO\_PW} is about 20ms from the interval the PW changes from max value to min value.
+\newpage
+\subsubsection{Go up the ramp, \code{KS = 75}, \code{KDX = 75}, \code{KDY = 75}}
+\begin{center}
+\begin{tikzpicture}[scale = 1.25]
+% let both axes use the same layers
+\pgfplotsset{set layers}
+%
+\begin{axis}[
+scale only axis,
+xmin=1457,xmax=2269,
+axis y line*=left,
+xlabel=TIME,
+ylabel style = {align=center},
+ylabel={GX \ref{GX5} \\ GY \ref{GY5}},
+x unit=\times20ms,]
+\addplot [blue,thick]table [x=TIME, y=GX, col sep=comma] {5.csv};
+\label{GX5}
+\addplot [green,thick]table [x=TIME, y=GY, col sep=comma] {5.csv};
+\label{GY5}
+\end{axis}
+%
+\begin{axis}[
+scale only axis,
+xmin=1457,xmax=2269,
+axis y line*=right,
+axis x line=none,
+ylabel style = {align=center},
+ylabel={DRIVE MOTOR PW \ref{TVP5} \\ STEERING SERVO PW \ref{TVS5}},
+x unit=\times20ms
+]
+\addplot [red,thick]table [x=TIME, y=DRIVE_MOTOR_PW, col sep=comma] {5.csv};
+\label{TVP5}
+\addplot [black,thick] table[x=TIME, y=STEERING_SERVO_PW, col sep=comma] {5.csv};
+\label{TVS5}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+In this plot, \code{GY} is always negative and \code{DRIVE\_MOTOR\_PW} is below \code{DRIVE\_MOTOR\_NEUT}. Therefore, the car is reversing up to the ramp about all the time.
+\newpage
+\subsection{Problems Encountered \& Solutions} \label{QA}
+During our testing, we had 2 problems and solved all of them in the end.
+\subsubsection{Problems}
+\begin{enumerate}
+  \item The car did not stop when it reach the bottom or top of the ramp, it moved slowly instead.
+  \item The car did not move backward when the slide switch was off.
+  \item Sometimes when the car is placing on the flat ground, it will move forward or reverse which the car should stop moving.
+  \item When the car successfully moved down the ramp, it cannot stop.
+\end{enumerate}
+\subsubsection{Solutions}
+\begin{enumerate}
+  \item The reading from accelerometer is so accurate that it detected the smallest tilting on the ground where should be considered flat. The solution is to include an offset on the data to create an area that should be considered the car is on the ground.
+  \item \code{DRIVE\_MOTOR\_PW} and \code{DRIVE\_MOTOR\_MAX/MIN} in the code are unsigned int, heritaged from Lab 4 codes. When calculating using a \code{KDX} or \code{KDY} that is too large, the result of \code{DRIVE\_MOTOR\_PW} would be a negative integer. And if \code{DRIVE\_MOTOR\_PW} is signed integer, neither of \code{DRIVE\_MOTOR\_MAX} or \code{DRIVE\_MOTOR\_MIN} could be unsigned int since \code{DRIVE\_MOTOR\_PW} should be limited between the minimum and the maximum and unsigned int comparing with signed int cause error. The solution is changing the data type of \code{DRIVE\_MOTOR\_PW} and \code{DRIVE\_MOTOR\_MAX/MIN} in the code to signed int.
+  \item Before moving up the ramp, we check the \code{GX} and \code{GY} and ensure that the accelerometer is horizontal on the EVB. Also, because the accelerometer is very sensitive to distribution, we treat the value of \code{GX} and \code{GY} as zero when the absolute value is below 16.
+  \item We try to increase the interval the car reading the data from the accelerometer. Before changing the interval, the acceleration caused by the rotation of drive motor will be read and it will leads to positive feedback and the car will not stop. After changing, the useless data will be overwritten before using it to change the \code{DRIVE\_MOTOR\_PW} and \code{STEERING\_SERVO\_PW}.
+\end{enumerate}
+
+\subsection{Suggested improvements to HW \& SW}
+The Lab 5 is linked to the codes from the Lab4. Therefore, these codes should not be deleted. This message was shown at the beginning of the guide for LAb 5. Therefore, some of the students might have already deleted them. This message should be shown earlier in the Lab 3.3 guide to lower the probability of deleting the file. 
+\newpage
+\section{Academic Integrity Certification}
+All the undersigned hereby acknowledge that all parts of this laboratory exercise and report, other than what was supplied by the course through handouts, code templates and web-based media, have been developed, written, drawn, etc. by the team. The guidelines in the Embedded Control Lab Manual regarding plagiarism and academic integrity have been read, understood, and followed. This applies to all pseudo-code, actual C code, data acquired by the software submitted as part of this report, all plots and tables generated from the data, and any descriptions documenting the work required by the lab procedure. It is understood that any misrepresentations of this policy will result in a failing grade for the course.
+\newpage
+\section{Participation}
+All the undersigned hereby acknowledge that all parts of this laboratory exercise and report, other than what was supplied by the course through handouts, code templates and web-based media, have been developed, written, drawn, etc. by the team. The guidelines in the Embedded Control Lab Manual regarding plagiarism and academic integrity have been read, understood, and followed. This applies to all pseudo-code, actual C code, data acquired by the software submitted as part of this report, all plots and tables generated from the data, and any descriptions documenting the work required by the lab procedure. It is understood that any misrepresentations of this policy will result in a failing grade for the course. Participation (this is only a template; make changes as appropriate or necessary) The following individual members of the team were responsible for (give percentages of involvement)
+\begin{enumerate}
+  \item Hardware implementation:
+  \begin{itemize}
+    \item Zhongqi Liu \hfill 30\%
+    \item Yilu Zhou \hfill 40\%
+    \item Z Jin \hfill 30\%
+  \end{itemize}
+  \item Software implementation:
+  \begin{itemize}
+    \item Zhongqi Liu \hfill 20\%
+    \item Yilu Zhou \hfill 40\%
+    \item Z Jin \hfill 40\%
+  \end{itemize}
+  \item Data Analysis:
+  \begin{itemize}
+    \item Zhongqi Liu \hfill 30\%
+    \item Yilu Zhou \hfill 50\%
+    \item Z Jin \hfill 20\%
+  \end{itemize}
+  \item Report Development \& Editing:
+  \begin{itemize}
+    \item Zhongqi Liu \hfill 25\%
+    \item Yilu Zhou \hfill 50\%
+    \item Z Jin \hfill 25\%
+  \end{itemize}
+\end{enumerate}
+The following signatures indicate awareness that the above statements are understood and accurate.
+\begin{itemize}
+  \item
+  \item
+  \item
+\end{itemize}
+
+
+
+\end{document} 

@@ -1,0 +1,73 @@
+compile directives
+    #include <studio.h>
+    #include <c8051_SDCC.h>
+    #include <stdlib.h>
+declare global variables
+    unsigned int PW_CENTER, PW_LEFT, PW_RIGHT, SERVO_PW, PCA_START.
+    sbit CF (PCA 0 COUNTER OVERFLOW FLAG)
+function prototypes
+    void Port_Init(void);
+    void PCA_Init(void);
+    void XBR0_Init(void);
+    void Interrupt_Init(void);
+    void Steering_Servo(void);
+    void PCA_ISR (void) __interrupt 9;
+main function
+    declare local variables
+	char input
+    initialize system, ports and PCA
+        Sys_Init();
+        putchar(' ');
+        Port_Init();
+        XBR0_Init();
+        Interrupt_Init();
+        PCA_Init();
+    print beginning message.
+    set SERVO_PW = PW_CENTER, 1.5ms.
+    begin infinite loop
+        Run Turn_Steer(void) to vary the steering angle.
+    end infinite loop
+end main function
+
+Functions
+    void Port_Init()
+        set output pin for CEX0, CEX2, and CEX3 in push-pull mode.
+    End Port_Init()
+
+    void XBR0_Init()
+        configure the crossbar as directed in the labor manual.
+    End XBR0_Init()
+
+    void Interrupt_Init()
+        Enable general interrupt
+        Enable PCA overflow interrupts
+    End Interrupt_Init()
+
+    void PCA_Init()
+        Enable SYSCLK/12 and enable interrupt.
+        Enable CCM0 16bit PWM
+        Enable PCA counter
+    End PCA_Init()
+
+    void PCA_ISR() __interrupt 9
+        Increment PCA_COUNTER to count the number of overflows
+        If PCA interrupt flag is set
+            Clear the overflow flag
+            Set PCA0 to PCA_START
+        End if
+        handle other PCA interrupt sources
+    End PCA_ISR() __interrupt 9
+    
+    void Steering_Servo()
+        declare local variables
+            char input
+        wait for key stroke
+	if 'r', increase PW by 10
+            if SERVO_PW > PW_RIGHT, limit it to PW_RIGHT
+        else if 'l', decrease PW by 10
+            if SERVO_PW < PW_LEFT, limit it to PW_LEFT
+	print SERVO_PW
+        update Servo command
+            update lo byte of CCM 0
+            update hi byte of CCM 0
+    End Steering_Servo()

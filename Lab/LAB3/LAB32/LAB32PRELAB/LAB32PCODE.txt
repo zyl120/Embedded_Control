@@ -1,0 +1,86 @@
+compile derivatives
+    #include <studio.h>
+    #include <i2c.h>
+    #include <c8051_SDCC.h>
+    #include <<stdlib.h>
+declare global variables
+    PCA_COUNTER, PCA_START, READ_COUNTER, DISTANCE
+    sbit CF(PCA0 COUNTER OVERFLOW FLAG)
+function prototypes
+    void SMB_Init(void);
+    void PCA_Init(void);
+    void XBR0_Init(void);
+    void Interrupt_Init(void);
+    void PCA_ISR(void) __interrupt 9;
+    void Ping_Ranger(void);
+    unsigned int Read_Ranger(void);
+main function
+    declare local variables
+        NONE
+    initialize system, ports and PCA
+        Sys_Init();
+        putchar(' ');
+        SMB_Init();
+        XBR0_Init();
+        Interrupt_Init();
+        PCA_Init();
+    Begin infinite loop
+        If 80 ms has passed
+            read the ranger using Read_Ranger()
+            Set DISTANCE equals the result of Read_Ranger()
+            start a ping using Ping_Ranger()
+            Reset the READ_COUNTER
+            print the range
+        End if
+    End infinite loop
+End main function
+
+functions
+    void SMB_Init()
+        Set SCL to 100khz
+        Enable SMBus
+    End SMB_Init()
+
+    void XBR0_Init()
+        configure the crossbar the same as the the same as Lab3.1 (0x27)
+    End XBR0_Init()
+
+    void Interrupt_Init()
+        Enable general Interrupt
+        Enable PCA overflow interrupts
+    End Interrupt_Init()
+
+    void PCA_Init()
+        Enable SYSCLK/12 and enable interrupts
+        Enable PCA COUNTER
+    End PCA_Init()
+
+    void PCA_ISR() __interrupt 9
+        Increment PCA_COUNTER to count the number of overflows
+        if PCA_COUNTER is larger than 3
+            Increment the READ_COUNTER
+            Set PCA_COUNTER to 0
+        End if
+        If PCA interrupt flag is set
+            Clear the overflow flag
+            Set PCA0 to PCA_START
+        End if
+        handle other PCA interrupt sources
+    End PCA_ISR() __interrupt 9
+
+    void Ping_Ranger()
+        write 0x51 to reg 0 of the ranger
+        write one byte of data to reg 0 at addr
+    End Ping_Ranger()
+
+    unsigned int Read_Ranger()
+        define local variables
+            Data[2]: to store the data from ranger
+            range: to store the calculated distance
+            addr: the address of the ranger
+        read two bytes, starting at reg 2 of the ranger
+        calculate the distance from the Data
+        return the range
+    End Read_Ranger()
+
+

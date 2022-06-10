@@ -1,0 +1,99 @@
+Compile directives
+    #include <c8051_SDCC.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+
+Function prototypes
+    void Port_Init(void);
+    void Timer_Init(void);
+    void Interrupt_Init(void);
+    void Timer0_ISR(void) __interrupt 1;
+    void random(void);
+    unsigned char IsPB1Pushed(void);
+    unsigned char IsPB2Pushed(void);
+    unsigned char IsSSOn(void);
+    void LEDController(void);
+    void ResultController(void);
+    void TurnBILEDGreen(void);
+    void TurnBILEDRed(void);
+    void TurnBILEDOff(void);
+    void TurnLED0On(void);
+    void TurnLED0Off(void);
+    void TurnLED1On(void);
+    void TurnLED1Off(void);
+
+Declare global variables
+    sbit LED0, LED1, BILED1, BILED2, BUZZER, SS, PB1, PB2, TR0.
+    unsigned int Counts.
+    unsigned char Wins, CurrentRandom, PreviousRandom, Tries.
+
+Main function
+    declare local variables
+        (NONE)
+    Initialization functions
+        Sys_Init();
+        Port_Init();
+        Interrupt_Init();
+        Timer_Init();
+        putchar(' ');
+        Turn off all the outputs
+        Turn off Timer0
+        Begin infinite loop
+            Wait until slide switch is on
+            loop for 10 times
+                Execute LEDController control the LED based on the CurrentRandom
+                Turn Timer0 on
+                Clear the counts on Timer0
+                Wait for 1 second
+                Execute ResultController to determine the user inputs
+                Reset the Counts on Timer0.
+            End the loop
+            print the result
+            Reset the number of wins to 0
+            Turn off all the outputs
+        End infinite loop
+End main function
+
+Functions
+    void Port_Init(void)
+        Set Port 3 input pins to open drain mode.
+        Set Port 3 output pins to push-pull mode.
+        Set Port 3 input pins to high impedance state.
+        Set Port 2 input pins to open drain mode.
+        Set Port 2 input pins to high impedance state.
+    void Interrupt_Init(void)
+        Enable Timer0 Interrupt request (by masking).
+        Enable global interrupts (by sbit).
+    void Timer_Init(void)
+        Set Timer0 as stated in the manual, Use 16bit and SYSCLK.
+        Stop the Timer0 for now.
+        Clear high and low byte of T0
+    void Timer0_ISR(void) __interrupt 1
+        Increment the Counts
+    void random(void)
+        Begin infinite loop
+            Generate a random number.
+            Exit while the new random number is not the same as the old one.
+            Set the PreviousRandom the same as the CurrentRandom.
+        End infinite loop
+    void LEDController(void)
+        Use the random function to generate a random number.
+        Turn on LED(s) based on the result.
+    void ResultController(void)
+        Determine the inputs from the user and light up the BILED accordingly.
+    unsigned char IsPB1Pushed(void)
+        Return 1 if PB1 is pushed.
+        Return 0 if PB1 is not pushed.
+    unsigned char IsPB2Pushed(void)
+        Return 1 if PB2 is pushed.
+        Return 0 if PB2 is not pushed.
+    unsigned char IsSSOn(void)
+        Return 1 if slide switch is on.
+        Return 0 if slide switch is off.
+    void TurnBILEDGreen(void): Turn the BILED to green.
+    void TurnBILEDRed(void): Turn the BILED to red.
+    void TurnBILEDOff(void): Turn off the BILED.
+    void TurnLED0On(void): Turn on LED0.
+    void TurnLED0Off(void): Turn off LED0.
+    void TurnLED1On(void): Turn on LED1.
+    void TurnLED1Off(void): Turn off LED1.

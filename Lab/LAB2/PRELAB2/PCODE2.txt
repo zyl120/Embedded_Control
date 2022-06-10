@@ -1,0 +1,156 @@
+Compile directives
+    #include <c8051_SDCC.h>
+    #include <stdio.h>
+    #include <stdlib.h>
+
+Function prototypes
+    void Port_Init(void);
+    void Timer_Init(void);
+    void Interrupt_Init(void);
+    void ADC_Init(void)
+    void Timer0_ISR(void) __interrupt 1;
+    void random(void);
+    unsigned char read_AD_input(unsigned char pin_number) // read the AD_value
+    void Potent_Reader(void); // The function to read the potentiometer and set the on-time;
+    void Mode_1(void); // Set the blink pattern for mode 1
+        void Sequence_1(void); // Function to control the sequence 1
+        void Sequence_2(void); // Function to control the sequence 2
+        void Sequence_3(void); // Function to control the sequence 3
+    void Mode_2(void); // The function to count the number PB pushed
+    void Mode_3(void); // Set the function of mode 3
+    void Verifier(void); // The function to check the wire connection
+
+Declare global variables
+    sbit LED0, LED1, LED2, LED3, BILED0, BILED1, SS0, SS1, PB0, PB1, PB2, PB3
+    unsigned int Counts // Timer 0 counter
+    unsigned char Potent_AD // A/D converter result
+    unsigned char Current_Random
+    unsigned char Previous_Random
+    unsigned int Button_Status_Counter
+
+Main function
+    declare local variables
+        (NONE)
+    Initialization functions
+        Sys_Init();
+        Port_Init();
+        Interrupt_Init();
+        Timer_Init();
+        ADC_Init();
+        putchar(' ');
+        Turn off all the outputs
+        Turn off Timer0
+        Begin infinite loop
+            Check the button status to determine the mode
+            call the designated mode
+        End infinite loop
+End main function
+
+functions
+    void Port_Init(void)
+
+    void Mode_1(void)
+        Call the Potent_Reader(void) and get the Potent_AD result.
+        Using the conversion to get the number of Counts required for the Timer0 to stop the required time.
+        Call Sequence_1() to blink sequence 1.
+        Call Sequence_2() to blink sequence 2.
+        Call Sequence_3() to blink sequence_3.
+    Exit the Mode_1(void)
+
+
+    void Mode_2(void)
+        declare local variables
+            unsigned int Player_1_Score;
+            unsigned int Player_2_Score;
+        Turn off all LEDs
+        Repeat 3 times
+        Call the Potent_Reader(void) and get the Potent_AD result.
+        Using the conversion to get the number of Counts required for the Timer0 to stop the required time.
+        Turn the left LED on for the given time
+            Count the number left button was pushed
+                Increment the Player_1_Score
+            check to see if the right button is pushed
+                if pushed, right player lose the game
+        Ensure that the left button is not still pressed using Button_Status_Counter.
+        Turn on the right LED on for the given time
+            Count the number right button was pushed
+                Increment the Player_2_Score
+            check to see if the left button is pushed
+                if pushed, left player lose the game
+        Ensure that the right bbutton is not still pressed using Button_Status_Counter.
+        Display the score for both players and compare the value of Player_1_Score and Player_2_Score.
+        Light up the BILEd depends in the scores
+    Exit the Mode_2(void);
+
+    void Mode_3(void);
+        declare local variables
+            unsigned int Player_1_Score;
+            unsigned int Player_2_Score
+        Turn off all LEDs
+        Call the Potent_Reader(void) and get the Potent_AD result.
+        Using the conversion to get the number of Counts required for the Timer0 to stop the required time.
+        Repeat 5 times
+            Set a clockwise blink pattern
+                Determining the starting LED using Random_Number from random
+                Repeat
+                    Blink the appropriate LED
+                    Check id the button is pushed and released during onn-time(one time push)
+                If button was correectly pressed
+                    Add total number of LED blinks to the Player_1_Score
+                    Exit the clockwise blink pattern
+            Set a counter_clockwise blink pattern
+                Determining the starting LED using Random_Number from random
+                Repeat
+                    Blink the appropriate LED
+                    Check id the button is pushed and released during onn-time(one time push)
+                If button was correectly pressed
+                    Add total number of LED blinks to the Player_2_Score
+                    Exit the clockwise blink pattern
+        Display score and determine winner player based on comparison
+        Set the BILED
+    Exit the Mode_3(void)
+
+    void Port_Init(void)
+        Set Port P1.0 as *analog inputs to 1
+        Set Port P2.0, P2.1, P2.2, P2.3, P2.4, P2.5 as *digital inputs to 0
+        Set Port P1.0, P2.0, P2.1, P2.2, P2.3, P2.4, P2.5 as inputs
+        Set Port P3.0, P3.1. P3.2, P3.3, P3.4, P3.5 as digital outputs
+        Set Port P1.0, P2.0, P2.1, P2.2, P2.3, P2.4, P2.5 to high impedence.
+    Exit the Port_Init(void)
+
+    void Interrupt_Init(void)
+        Enable Timer0 Interrupt request (by masking).
+        Enable global interrupts (by sbit).
+
+    void Timer_Init(void)
+        Set Timer0 as stated in the manual, Use 16bit and SYSCLK.
+        Stop the Timer0 for now.
+        Clear high and low byte of T0
+
+    void ADC_Init(void)
+        Set Vref to use internal ref. Voltage 2.4V.
+        Enable A/D converter.
+        Set A/D converter gain to 1.
+
+    void Timer0_ISR(void) __interrupt 1
+        Increment the Counts and Button_Status_Counter to count the number of overflows
+    
+    void random(void)
+        Begin infinite loop
+            generate random numbers
+            Exit while the new random number is not the same as the old one
+            Set the Previous_Random the same as the Current_Random
+        End infinite loop
+
+    void Potent_Reader(void)
+    declare local variables
+        unsigned char AD_value
+    Call the unsigned char read_AD_input(unsigned char pin_number) to get the AD_value
+    Convert the AD_value to the number of Counts
+
+    unsigned char read_AD_input(unsigned char pin_number)
+        Set P1.n as the analog input for ADC1.
+        Clear the convertion completed flag
+        Initiate A/D convertion.
+        Wait for the conversion to be completed.
+        Return the digital value in ADC1 register.

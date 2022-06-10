@@ -1,0 +1,335 @@
+\documentclass[12pt]{article}
+\usepackage{setspace}
+\usepackage[ampersand]{easylist}
+\usepackage[margin=1in]{geometry}
+\usepackage{amsmath}
+\usepackage{ulem}
+\usepackage{mathtools}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{sectsty}
+\usepackage{titlecaps}
+\usepackage{fancybox}
+\usepackage{mathptmx}
+\usepackage{amssymb}
+\usepackage{bm}
+\usepackage{graphicx}
+\usepackage{epstopdf}
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `basename #1 .tif`.png}
+\usepackage{color}
+\usepackage[shortlabels]{enumitem}
+\usepackage{pgfplots}
+\usepackage{filecontents}
+\usepackage[english]{babel}
+\usepackage{amsmath,amsthm}
+\usepackage{amsfonts}
+\usepackage{fontspec}
+\setmonofont[Scale=0.85]{Consolas}
+\usepgfplotslibrary{units}
+\usepackage{lscape}
+
+\doublespacing
+\sectionfont{\MakeUppercase}
+\subsectionfont{\MakeUppercase}
+\subsubsectionfont{\MakeUppercase}
+\lstset {
+    language=C,
+    rulesepcolor = \color{black}
+}
+\lstdefinestyle{customc}{
+    belowcaptionskip=1\baselineskip,
+    breaklines=true,
+    language=C,
+    showstringspaces=true,
+    basicstyle=\ttfamily,
+    keywordstyle=\bfseries\color{green!40!black},
+    commentstyle=\itshape\color{purple!40!black},
+    identifierstyle=\color{blue},
+    stringstyle=\color{orange},
+}
+\lstset{escapechar=@,style=customc}
+\renewcommand{\footnotesize}{\fontsize{10pt}{12pt}}
+\pgfplotsset{compat=1.16, height=3.5in, width=5in}
+\newcommand\code[2][]{
+    \tikz[baseline=(s.base)]{
+        \node(s)[
+            rounded corners,
+            fill=black!5,        % background color
+            draw=black,          % border of box
+            text=black, % text color
+            inner xsep =3pt,    % horizontal space between text and border
+            inner ysep =0pt,    % vertical space between text and border
+            text height=2ex,    % height of box
+            text depth =1ex,    % depth of box
+            #1                  % other options
+        ]{\texttt{#2}};
+    }
+}
+
+\begin{document}
+\begin{titlepage}
+	%\centering
+	\begin{center}
+	{\scshape\LARGE{Rensselaer Polytechnic Institute}\par}
+	\vspace{3.5cm}
+	{\huge\bfseries{Laboratory 6 Report}\par}
+	\vspace{2cm}
+	{\Large\itshape{Yilu Zhou, Z Jin, Zhongqi Liu}\par}
+    {\Large\itshape{Section 02, Side 9B, 10B, 11B}\par}
+	\vfill
+	supervised by\par
+	Dr.~ Jeffrey \textsc{Braunstein}\par
+    graded by\par
+    Syed \textsc{Naqvi}
+	\vfill
+% Bottom of the page
+	{\large \today\par}
+    \end{center}
+\end{titlepage}
+\section{Introduction}
+\subsection{Purpose \& Objectives}
+\begin{enumerate}
+    \item Learning the differences between the proportional and derivative (PD) control of smart car and that of the gondola.
+    \item Implement PD control based on the measurements from the compass. Read from the keypad to set the initial-desired heading and \code{KD} (derivative gain) and \code{KP}(proportional gain).
+    \item Making the gondola go to the desired heading at a reasonable speed while minimizing the damping. Using the direction from compass to modify this value during continuous operation by using closed-loop feedback.
+\end{enumerate}
+
+\subsection{Overview of gondola feedback control}
+The general control method in this lab for gondola is PD control. First, the program will ask the users to input the \code{KP}(proportional gain), \code{KD}(derivative gain) and the \code{TARGET\_HEADING}(final heading of the gondola) from the keypad on the gondola. \par
+\code{KP} is in charge of controlling the speed for the Gondola to move to \code{TARGET\_HEADING}, If \code{KP} is large, the Gondola will move to the \code{TARGET\_HEADING} fast. However the larger the \code{KP}, the larger the chance that Gondola will go over \code{TARGET\_HEADING}. Since the turntable does not have a lot of friction, the Gondola will not be stopped when it reaches the \code{TARGET\_HEADING}. Therefore, the Gondola will perform an oscillating motion around the desired heading, and if the speed is too big, completing more than an half-circle motion, the gondola will lose control and just keep spinning.\par
+The solution to this problem is to use the derivative control, which is only designed to slow down the current motion. By setting the proper \code{KD}, we can slow down the Gondola when it is reaching the \code{TARGET\_HEADING}, and therefore making it stop at the \code{TARGET\_HEADING} without passing the limit. Here is an example of our PD control method for the tail fan:
+\begin{lstlisting}
+TAIL_FAN_PW = NEUT_PW + KP * (CURRENT_HEADING_ERROR) + KD * (CURRENT_HEADING_ERROR - PREVIOUS_HEADING_ERROR);
+\end{lstlisting}
+\newpage
+\section{Results, Analysis \& Conclusions}
+\subsection{Description of gondola performance}
+The gondola show performs under damp when \code{KP} is too big or \code{KD} is not big enough, performs over damp when \code{KP} is not big enough or \code{KD} is too big and performs critical damp when \code{KP} and \code{KD} are suitable values.
+
+\subsection{Verification of performance to specifications}
+The gondola performed exactly as we expected. If we set the \code{KP} too large and \code{KD} too small, gondola will perform under damp motion and start spinning. If we set the \code{KP} too small and \code{KD} too large. Gondola will perform over damp motion which will take it a long time to reach the \code{TARGET\_HEADING}. If we set the \code{KP} and \code{KD} to the proper value, gondola will perform suitable damp motion which is the optimal solution.
+\newpage
+\subsection{Analysis of plots from data}
+\subsubsection{over damped (\code{KP = 2000}, \code{KD = 30000}, \code{STAGE} from 2 to 3)}
+\begin{center}
+\begin{tikzpicture}[scale = 1]
+% let both axes use the same layers
+\pgfplotsset{set layers}
+%
+\begin{axis}[
+scale only axis,
+xmin=1500,xmax=2500,
+axis y line*=right,
+axis x line=none,
+ylabel style = {align=center},
+ylabel={TAIL FAN PW \ref{TFP1}},
+x unit=\times20ms
+]
+\addplot [green,thick]table [x=TIME, y=TAIL_FAN_PW, col sep=comma] {DATA1.csv};
+\label{TFP1}
+\end{axis}
+\begin{axis}[
+scale only axis,
+xmin=1500,xmax=2500,
+axis y line*=left,
+xlabel=TIME,
+ylabel style = {align=center},
+ylabel={CURRENT HEADING \ref{CH1} TARGET HEADING \ref{TAR1} HEADING ERROR \ref{HE1}},
+x unit=\times20ms,]
+\addplot [blue,thick]table [x=TIME, y=CURRENT_HEADING, col sep=comma] {DATA1.csv};
+\label{CH1}
+\addplot [orange,thick]table [x=TIME, y=TARGET_HEADING, col sep=comma] {DATA1.csv};
+\label{TAR1}
+\addplot [purple,thick]table [x=TIME, y=HEADING_ERROR, col sep=comma] {DATA1.csv};
+\label{HE1}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+This is an example of an over damping of the gondola. When the \code{TARGET\_HEADING} changes from previous heading to another heading, \code{TAIL\_FAN\_FAN} changes from \code{NEUT\_PW} to another value. However, because the \code{KP = 1000} and \code{KD = 30000}, the gains lead to an over dump. Therefore, the \code{CURRENT\_HEADING} exceeds the \code{TARGET\_HEADING} and the gondola first passes through the designated heading and then the tail fan reverses to fix the heading.
+\newpage
+\subsubsection{OPTIMIZED (\code{KP = 1000}, \code{KD = 30000}, \code{STAGE} from 2 to 3)}
+\begin{center}
+\begin{tikzpicture}[scale = 1]
+% let both axes use the same layers
+\pgfplotsset{set layers}
+%
+\begin{axis}[
+scale only axis,
+xmin=1400,xmax=2400,
+axis y line*=right,
+axis x line=none,
+ylabel style = {align=center},
+ylabel={LEFT FAN PW \ref{LFP2}},
+x unit=\times20ms
+]
+\addplot [green,thick]table [x=TIME, y=LEFT_FAN_PW, col sep=comma] {DATA2.csv};
+\label{LFP2}
+\end{axis}
+\begin{axis}[
+scale only axis,
+xmin=1400,xmax=2400,
+axis y line*=left,
+xlabel=TIME,
+ylabel style = {align=center},
+ylabel={CURRENT HEADING \ref{CH2} TARGET HEADING \ref{TAR2} HEADING ERROR \ref{HE2}},
+x unit=\times20ms,]
+\addplot [blue,thick]table [x=TIME, y=CURRENT_HEADING, col sep=comma] {DATA2.csv};
+\label{CH2}
+\addplot [orange,thick]table [x=TIME, y=TARGET_HEADING, col sep=comma] {DATA2.csv};
+\label{TAR2}
+\addplot [purple,thick]table [x=TIME, y=HEADING_ERROR, col sep=comma] {DATA2.csv};
+\label{HE2}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+This plot is an example of an suitable damping. In this plot, the \code{CURRENT\_HEADING} is about the same as the \code{TARGET\_HEADING} after the heading was changed. This means that the \code{KP} and \code{KD} is suitable so that the damping is about zero.
+\newpage
+\subsubsection{UNDER DAMPED (\code{KP = 500}, \code{KD = 30000}, \code{STAGE} from 1 to 2)}
+\begin{center}
+\begin{tikzpicture}[scale = 1]
+% let both axes use the same layers
+\pgfplotsset{set layers}
+%
+\begin{axis}[
+scale only axis,
+xmin=800,xmax=1800,
+axis y line*=right,
+axis x line=none,
+ylabel style = {align=center},
+ylabel={LEFT FAN PW \ref{LFP3}},
+x unit=\times20ms
+]
+\addplot [green,thick]table [x=TIME, y=LEFT_FAN_PW, col sep=comma] {DATA3.csv};
+\label{LFP3}
+\end{axis}
+\begin{axis}[
+scale only axis,
+xmin=800,xmax=1800,
+axis y line*=left,
+xlabel=TIME,
+ylabel style = {align=center},
+ylabel={CURRENT HEADING \ref{CH3} TARGET HEADING \ref{TAR3} HEADING ERROR \ref{HE3}},
+x unit=\times20ms,]
+\addplot [blue,thick]table [x=TIME, y=CURRENT_HEADING, col sep=comma] {DATA3.csv};
+\label{CH3}
+\addplot [orange,thick]table [x=TIME, y=TARGET_HEADING, col sep=comma] {DATA3.csv};
+\label{TAR3}
+\addplot [purple,thick]table [x=TIME, y=HEADING_ERROR, col sep=comma] {DATA3.csv};
+\label{HE3}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+This plot is an example of an under damping. In this plot, the \code{CURRENT\_HEADING} is below the \code{TARGET\_HEADING} after the heading was changed. This means that the \code{KP} is too small for the gondola to get to the suitable direction.
+\newpage
+\subsubsection{another plot (\code{KP = 500}, \code{KD = 30000}, \code{STAGE} from 1 to 3)}
+\begin{center}
+\begin{tikzpicture}[scale = 1]
+% let both axes use the same layers
+\pgfplotsset{set layers}
+%
+\begin{axis}[
+scale only axis,
+xmin=0,xmax=2440,
+axis y line*=right,
+axis x line=none,
+ylabel style = {align=center},
+ylabel={LEFT FAN PW \ref{LFP3}},
+x unit=\times20ms
+]
+\addplot [green,thick]table [x=TIME, y=LEFT_FAN_PW, col sep=comma] {DATA4.csv};
+\label{LFP4}
+\end{axis}
+\begin{axis}[
+scale only axis,
+xmin=0,xmax=2440,
+axis y line*=left,
+xlabel=TIME,
+ylabel style = {align=center},
+ylabel={CURRENT HEADING \ref{CH4} TARGET HEADING \ref{TAR4} HEADING ERROR \ref{HE4}},
+x unit=\times20ms,]
+\addplot [blue,thick]table [x=TIME, y=CURRENT_HEADING, col sep=comma] {DATA4.csv};
+\label{CH4}
+\addplot [orange,thick]table [x=TIME, y=TARGET_HEADING, col sep=comma] {DATA4.csv};
+\label{TAR4}
+\addplot [purple,thick]table [x=TIME, y=HEADING_ERROR, col sep=comma] {DATA4.csv};
+\label{HE4}
+\end{axis}
+\end{tikzpicture}
+\end{center}
+This plot is an example of a full angle transition.
+\newpage
+
+\subsection{What was Learned}
+In this Lab, a type of data called long was used to calculate pulse width. This types of data is able to store a larger range of integer comparing to the data types learned before, which is from $-2^{16}$ to $2^{16}$. The corporation between \code{KD} and \code{KP} is another core subject in this lab. In the function used to calculate the pulse width. The codes are here:
+\begin{lstlisting}
+TEMP_PW = NEUT_PW - (long)KP * CURRENT_HEADING_ERROR - (long)KD * (CURRENT_HEADING_ERROR - PREVIOUS_HEADING_ERROR);
+\end{lstlisting}
+\code{KP} is used to control the range of rotation and \code{KD} is to control the error of rotation to prevent from overturning.\par
+We also learnt that the importance of using simulation. At the beginning of the Lab, we forgot that there was a web page to show some simulation for different \code{KP} and \code{KD}. We then encountered large problems when trying to find the correct gains. After we found the web page, we were capable to find the corresponding gains without actually typing them from the keypad, which really saves some time for us.
+
+\subsection{Problems Encountered \& Solution}
+Several problems were encountered and we solved all of them at the end of the Lab:
+\subsubsection{Problems Encountered}
+\begin{enumerate}
+\item The gondola rotated so violently, that it did not stop after meeting the target heading. Instead, it turned over the limit of $180^{\circ}$ and continued rotating.
+\item After the online simulation, a new pair of \code{KP} and \code{KD} was used in reality testing, but result is significantly different.
+\item During testing, one side of the fan run without commands now and then, and stops working when running the code.
+\item During testing, the gondola restarts sometime after running the code, following with fan running slow or stopping or dim keypad LCD screen.
+\end{enumerate}
+\subsubsection{Solution}
+\begin{enumerate}
+\item \code{KP} is too large while the \code{KD} is too small. \code{KD} did not limit the rotation speed or error when moving near the target heading. The solution was to find another pair of appropriate of \code{KP} and \code{KD}, and the simulator online was used to find them.
+\item  In simulation, the right side fan and the tail fan was set to share a same value of PW, while the left fan has another, that
+\begin{lstlisting}
+PW_LEFT = 2 * PW_NEUT - PW_RIGHT/TAIL;
+\end{lstlisting}
+In the coding, however, PW of the tail fan was set to be same as the left side fan, which means now,
+\begin{lstlisting}
+PW_LEFT/TAIL = 2 * PW_NEUT - PW_RIGHT;
+\end{lstlisting}
+Simulation that setting LEFT and TAIL fans share equal PW was done. It provided evidence to this mistake and helped correct the code.
+\item It was certain that the gondola has some mechanic problems according to TA’s respond. A new gondola was used to test from then.
+\item After providing feedbacks to TA, who provided a new fully charged battery, it was certain that the gondola met an electricity problem.
+\end{enumerate}
+
+\newpage
+\section{Academic Integrity Certification}
+All the undersigned hereby acknowledge that all parts of this laboratory exercise and report, other than what was supplied by the course through handouts, code templates and web-based media, have been developed, written, drawn, etc. by the team. The guidelines in the Embedded Control Lab Manual regarding plagiarism and academic integrity have been read, understood, and followed. This applies to all pseudo-code, actual C code, data acquired by the software submitted as part of this report, all plots and tables generated from the data, and any descriptions documenting the work required by the lab procedure. It is understood that any misrepresentations of this policy will result in a failing grade for the course.
+\newpage
+\section{Participation}
+All the undersigned hereby acknowledge that all parts of this laboratory exercise and report, other than what was supplied by the course through handouts, code templates and web-based media, have been developed, written, drawn, etc. by the team. The guidelines in the Embedded Control Lab Manual regarding plagiarism and academic integrity have been read, understood, and followed. This applies to all pseudo-code, actual C code, data acquired by the software submitted as part of this report, all plots and tables generated from the data, and any descriptions documenting the work required by the lab procedure. It is understood that any misrepresentations of this policy will result in a failing grade for the course. Participation (this is only a template; make changes as appropriate or necessary) The following individual members of the team were responsible for (give percentages of involvement)
+\begin{enumerate}
+  \item Hardware implementation:
+  \begin{itemize}
+    \item Zhongqi Liu \hfill 30\%
+    \item Yilu Zhou \hfill 40\%
+    \item Z Jin \hfill 30\%
+  \end{itemize}
+  \item Software implementation:
+  \begin{itemize}
+    \item Zhongqi Liu \hfill 20\%
+    \item Yilu Zhou \hfill 40\%
+    \item Z Jin \hfill 40\%
+  \end{itemize}
+  \item Data Analysis:
+  \begin{itemize}
+    \item Zhongqi Liu \hfill 30\%
+    \item Yilu Zhou \hfill 50\%
+    \item Z Jin \hfill 20\%
+  \end{itemize}
+  \item Report Development \& Editing:
+  \begin{itemize}
+    \item Zhongqi Liu \hfill 25\%
+    \item Yilu Zhou \hfill 50\%
+    \item Z Jin \hfill 25\%
+  \end{itemize}
+\end{enumerate}
+The following signatures indicate awareness that the above statements are understood and accurate.
+\begin{itemize}
+  \item
+  \item
+  \item
+\end{itemize}
+
+
+\end{document} 

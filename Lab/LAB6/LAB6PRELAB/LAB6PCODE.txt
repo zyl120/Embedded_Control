@@ -1,0 +1,235 @@
+compile derivatives
+    #include <studio.h>
+    #include <<stdlib.h>
+    #include <c8051_SDCC.h>
+    #include <i2c.h>
+
+declare global variables
+    const unsigned char RANGER_ADDRESS, COMPASS_ADDRESS, POT_ADDRESS, STAGE0, STAGE1, STAGE2.
+    unsigned char RANGER_DATA[2], COMPASS_DATA[2], RANGER_READ_INDICATOR, COMPASS_READ_INDICATOR, AD_VALUE, OUTPUT_MODE.
+    unsigned int DISTANCE, HEADING, RUDDER_FAN_PW, THRUST_ANGLE_PW, LEFT_THRUST_POWER_FAN_PW, RIGHT_THRUST_POWER_FAN_FAN, PCA_COUNTER, TARGET_HEADING, PCA_START, DRIVE_MOTOR_NEUT AND STEERING_SERVO_NEUT.
+    int HEADING_ERROR.
+    long TEMP_PW
+    sbit POT, SS, CF.
+
+function prototypes
+    void Port_Init(void);
+    void PCA_Init(void);
+    void XBR0_Init(void);
+    void Interrupt_Init(void);
+    void SMB_Init(void);
+    void ADC_Init(void);
+    void PCA_ISR(void) __interrupt 9;
+    void Drive_Fan(void);
+    void Speed_Controller(void);
+    void Ping_Ranger(void);
+    void Read_Ranger(void);
+    void Fan_Init(void);
+    void Steering_Servo(void);
+    void Direction_Controller(void);
+    void Read_Compass(void);
+    void Steering_Servo_Init(void);
+    void Read_AD_Input(void);
+    void POT_Reader(void);
+    void Read_Keypad(void);
+    void Flight_Recorder(void);
+    unsigned int Is_SS_On(void);
+    void Turn_BILED_Green(void);
+    void Turn_BILED_Red(void);
+    void Turn_BILED_Off(void);
+    void Reset_PCA_Counter(void);
+    void Wait_For_1s(void);
+
+main function
+    declare local variables
+        NONE
+    initialize system, ports and PCA_COUNTER
+        Sys_Init();
+        putchar(' ');
+        Port_Init();
+        PCA_Init();
+        XBR0_Init();
+        Interrupt_Init();
+        SMB_Init();
+        ADC_Init();
+    Turn off the BILED.
+    Read the data from POT using POT_Reader.
+    initialize the drive motor using Drive_Motor_Init.
+    initialize the steering servo using Steering_Servo_Init.
+    Begin infinite loop
+        If the slide switch is on
+            Turn BILED to green
+            Set the drive motor PW to forward
+            Drive the motor
+            Wait for 3s
+            Begin infinite loop while the SS is on
+                wait for 3 second
+                call Read_Ranger 
+                call Speed_Controller
+                call Drive_Motor
+                call Direction_Controller
+                call Steering_Servo 
+        End if
+        Else if the slide switch is off
+            read the input from the keypad 
+            set DRIVE_MOTOR_PW to DRIVE_MOTOT_MAX 
+            call Drive_Motor 
+            set STEERING_SERVO_PW to STEERING_SERVO_NEUT
+            call Steering_Servo
+        End if
+    End infinite loop
+
+functions
+    void Drive_Fan(void)
+        Set the high and low byte of alll CEXs.
+    End function
+
+    void Speed_Controller(void)
+    if STAGE is 0
+        Run the code to determine the PW for all three fans.
+    if STAGE is 1
+        Run the code to determine the PW for the left and right fan.
+        Set the PW for CEX0 and CEX1 to NEUT.
+    if STAGE is 2
+        Run the code to determine the PW for the tail fan.
+        Set the PW for the left and right fan to NEUT.
+    End function
+    
+    void Ping_Ranger(void)
+        write the register 0 of the ranger to read the DISTANCE in cm.
+    End function
+
+    void Read_Ranger(void)
+        Read the data from register 2 and 3 from the ranger
+        Convert the read data to DISTANCE
+        Use Ping_Ranger to send the signal again
+    End function
+
+    void Fan_Init(void)
+        Set the PW of the drive motor to neutal
+        Turn the drive motor on for neutral
+        Wait for 1s
+    End function
+
+    void Direction_Controller(void)
+        Read the data from compass using Read_Compass
+        calculate the HEADING_ERROR
+        If the HEADING_ERROR is larger 1800
+            HEADING_ERROR minus 3600
+        End if
+        If the HEADING_ERROR is smaller than -1800
+            HEADING_ERROR plus 3600
+        End if
+        Set the corresponding PW for the tail fan.
+        If the STAGE is 0
+            Calculate the PW for the tail fan direction.
+        If the STAGE is 1
+            Do nothing
+        If the STAGE is 2
+            Calculate the PW for the tail fan direction.
+    End function
+    
+    void Read_Compass(void)
+        Read the data from the compass register 2 and 3
+        Convert the read data to HEADING
+    End function
+
+    void Read_AD_Input(void)
+        Set P1.4 as the analog input for the POT
+        Clear the "Conversion Completed" flag
+        Initiate A/D conversion
+        Wait for conversion to complete
+        Set the AD_VALUE
+    End function
+
+    void POT_Reader(void)
+        Read the AD_VALUE using Read_AD_Input().
+        calculate the max of the drive motor
+        calcualte the min of the drive motor.
+        calculate the right PW for the steering servo.
+        calculate the left PW for the steering servo.
+    End function
+
+    void Read_Keypad(void)
+        Get the target heading from the keypad
+        If the value is out of range
+            Ask the user to input another value
+        End if
+    End function
+
+    void Flight_Recorder(void)
+        if the MODE is not 1
+            Output to user-friendly UI.
+        End if
+        else 
+            Print TARGET_HEADING, HEADING, HEADING_ERROR, PW
+        End if
+    End function
+
+    unsigned int Is_SS_On(void)
+        if SS is on
+            return 1
+        End if
+        else if SS is off
+            return 0
+        End iff
+    End function
+    
+    void PCA_Init (void)
+        Enable SYSCLK/12 and enable interrupt.
+        Enable CCM0, CCM1, CCM2, CCM3 16bit PWM.
+        Enable PCA counter.
+        Set PCA_START for 20ms period.
+    End function
+    
+    XBR0_Init(void)
+        Configure crossbar with UART, SMBus, and CEX channels (0x25)
+    End function
+    
+    void Interrupt_Init(void)
+        Enable general interrupt.
+        Enable PCA overflow interrupts.
+    End function
+
+    void SMB_Init(void)
+        Set the clock frequency to be 100kHz.
+        Enable SMB.
+    End function
+
+    void ADC_Init(void)
+        configure ADC1 to use VREF.
+        Set a gain of 1.
+        Enable ADC1.
+    End function
+    
+    void PCA_ISR(void) __interrupt 9
+        increment the PCA_COUNTER
+        Set STAGE0 = 1.
+        if 20s has passed
+            set STAGE1 to 1
+            set STAGE0 to 0.
+        End if
+        if 40s has passed
+            set STAGE2 to 1.
+            Set STAGE1 to 0.
+        if 1s has passed and switch is on
+            call Flight_Recorder
+        End if
+        if CF
+            Clear overflow flag.
+            start count for 20ms period
+        End if
+        handle other PCA0 overflows
+    End function
+
+    void Reset_PCA_Counter(void)
+        reset PCA_COUNTER to 0
+    End function
+
+    void Wait_For_1s (void)
+        reset PCA_COUNTER
+        Begin infinite loop while PCA_COUNTER less than 51
+        wait for 1s
+        End infinite loop
+        reset PCA_COUNTER
+    End function

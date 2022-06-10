@@ -1,0 +1,116 @@
+compile derivatives
+    #include <studio.h>
+    #include <i2c.h>
+    #include <c8051_SDCC.h>
+    #include <<stdlib.h>
+declare global variables
+    PCA_COUNTER, PCA_START, READ_COUNTER, DISTANCE,
+    PW_CENTER, PW_MIN, PW_MAX, PW, PCA_START, PCA_COUNTER, 
+    NEUT_HEIGHT = 45cm.
+    sbit CF(PCA0 COUNTER OVERFLOW FLAG), SS(slide switch)
+function prototypes
+    void Port_Init(void);
+    void SMB_Init(void);
+    void PCA_Init(void);
+    void XBR0_Init(void);
+    void Interrupt_Init(void);
+    void PCA_ISR(void) __interrupt 9;
+    void Ping_Ranger(void);
+    unsigned int Read_Ranger(void);
+    void Drive_Motor(void);
+main function
+    declare local variables
+        NONE
+    initialize system, ports and PCA
+        Sys_Init();
+        putchar(' ');
+        Port_Init();
+        SMB_Init();
+        XBR0_Init();
+        Interrupt_Init();
+        PCA_Init();
+    Begin infinite loop
+        If slide switch is on
+            If 80 ms has passed
+                read the ranger using Read_Ranger()
+                Set DISTANCE equals the result of Read_Ranger()
+                start a ping using Ping_Ranger()
+                Reset the READ_COUNTER
+                Call Drive_Motor() to control the speed of the motor.
+            End if
+        End if
+        else
+            set the PW equals PW_CENTER(stop the motor)
+    End infinite loop
+End main function
+
+functions
+    void Port_Init()
+        set P3.6 to digital input, set P3.6 to high impedance.
+        set output pin for CEX0, CEX2, and CEX3 in push-pull mode.
+    End Port_Init()
+
+    void SMB_Init()
+        Set SCL to 100khz
+        Enable SMBus
+    End SMB_Init()
+
+    void XBR0_Init()
+        configure the crossbar the same as the the same as Lab3.1 (0x27)
+    End XBR0_Init()
+
+    void Interrupt_Init()
+        Enable general Interrupt
+        Enable PCA overflow interrupts
+    End Interrupt_Init()
+
+    void PCA_Init()
+        Enable SYSCLK/12 and enable interrupts
+        Enable PCA COUNTER
+    End PCA_Init()
+
+    void PCA_ISR() __interrupt 9
+        Increment PCA_COUNTER to count the number of overflows
+        if PCA_COUNTER is larger than 3
+            Increment the READ_COUNTER
+            Set PCA_COUNTER to 0
+        End if
+        If PCA interrupt flag is set
+            Clear the overflow flag
+            Set PCA0 to PCA_START
+        End if
+        handle other PCA interrupt sources
+    End PCA_ISR() __interrupt 9
+
+    void Ping_Ranger()
+        write 0x51 to reg 0 of the ranger
+        write one byte of data to reg 0 at addr
+    End Ping_Ranger()
+
+    unsigned int Read_Ranger()
+        define local variables
+            Data[2]: to store the data from ranger
+            range: to store the calculated distance
+            addr: the address of the ranger
+        read two bytes, starting at reg 2 of the ranger
+        calculate the distance from the Data
+        return the range
+    End Read_Ranger()
+
+    void Drive_Motor()
+        int ERROR;
+        ERROR = NEUT_HEIGHT - DISTANCE
+        Let PW equals k*(ERROR) + PW_CENTER
+        if DISTANCE is larger than 80cm
+            Set PW to PW_MIN, full reverse
+        End if
+        else if DISTANCE is smaller or equal to 10cm
+            Set PW to PW_MAX, full forward
+        End if
+        update speed command
+            update lo byte of CCM 2
+            update hi byte of CCM 2
+        print PW
+    End Drive_Motor()
+
+

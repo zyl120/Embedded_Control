@@ -1,0 +1,72 @@
+compile directives
+    #include <studio.h>
+    #include <c8051_SDCC.h>
+    #include <stdlib.h>
+    #include <I2C.h>
+declare global variables
+    unsigned int PCA_Counter, ReadCompass, PCA_START, h_count, new_heading, CompassD.
+    sbit CF (PCA 0 COUNTER OVERFLOW FLAG)
+function prototypes
+
+    void SMB_Init(void);
+    void PCA_Init(void);
+    void XBR0_Init(void);
+    void Interrupt_Init(void);
+    void PCA_ISR (void) __interrupt 9;
+
+main function
+    initialize system, ports and PCA
+        Sys_Init();
+        putchar(' ');
+        SMB_Init();
+        XBR0_Init();
+        Interrupt_Init();
+        PCA_Init();
+    print beginning message.
+    start while (1) loop
+	if 40 ms has passed
+	    call ReadCompass()
+	    set CompassD to ReadCompass/10.
+	    Print CompassD.
+    End while (1)loop
+End main function
+
+Functions
+    void SMB_Init()
+        set SCL to 100KHz
+	Enable SMBus
+    End SMB_Init()
+
+    void XBR0_Init()
+        configure the crossbar as directed in the labor manual.
+    End XBR0_Init()
+
+    void Interrupt_Init()
+        Enable general interrupt
+        Enable PCA overflow interrupts
+    End Interrupt_Init()
+
+    void PCA_Init()
+        Enable SYSCLK/12 and enable interrupt.
+        Enable PCA counter
+    End PCA_Init()
+
+    void PCA_ISR() __interrupt 9
+        Increment PCA_COUNTER to count the number of overflows
+        If PCA interrupt flag is set
+            Clear the overflow flag
+            Set PCA0 to PCA_START
+            if two overflow is done
+		set h_count to 0
+		set new_heading to 1
+        handle other PCA interrupt sources
+    End PCA_ISR() __interrupt 9
+
+    unsigned int ReadCompass()
+	unsigned char addr to 0xC0 for compass's address
+	unsigned char Data[2] that is an array with length of 2
+	unsigned int heading for returning degrees between 0 and 3599
+	read two byte starting at reg 2
+	set heading equals the combine of two values from reg 2
+	return heading in thenths degrees
+    End ReadCompass.

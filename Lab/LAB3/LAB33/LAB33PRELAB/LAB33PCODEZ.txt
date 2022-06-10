@@ -1,0 +1,99 @@
+compile directives
+    #include <studio.h>
+    #include <c8051_SDCC.h>
+    #include <stdlib.h>
+    #include <I2C.h>
+declare global variables
+    unsigned int PW_CENTER, PW_LEFT, PW_RIGHT, SERVO_PW, 
+    ReadCompass, PCA_START, h_count, new_heading, 
+    SS, Desired_Heading, error, actual_heading.
+    sbit CF (PCA 0 COUNTER OVERFLOW FLAG)
+function prototypes
+
+    void Port_Init(void);
+
+    void SMB_Init(void);
+    void PCA_Init(void);
+    void XBR0_Init(void);
+    void Interrupt_Init(void);
+    void PCA_ISR (void) __interrupt 9;
+
+main function
+    initialize system, ports and PCA
+        Sys_Init();
+        putchar(' ');
+        SMB_Init();
+        XBR0_Init();
+        Interrupt_Init();
+        PCA_Init();
+	Port_Init();
+    print beginning message.
+    wait for 1 sec
+    start while (1) loop
+	if ss is on and 40 ms has passed
+	    actual_heading = ReadCompass();
+	    error = Desired_Heading- actual_heading
+	    if error larger than 1800
+		error-=3600
+	    else if error smaller than -1800
+		error+=3600
+	    SERVO_PW = errors * Kps + PW_CENTER // 5/12 = 750/1800
+	    if SERVO_PW > PW_RIGHT, limit it to PW_RIGHT
+	    if SERVO_PW < PW_LEFT, limit it to PW_LEFT
+	    print SERVO_PW
+	    print desired_heading
+	    print actual_heading
+            update Servo command
+	else
+	    SERVO_PW = PW_CENTER
+        update lo byte of CCM 0
+        update hi byte of CCM 0
+    End while (1)loop
+End main function
+
+Functions
+    void Port_Init()
+        set output pin for CEX0, CEX2, and CEX3 in push-pull mode.
+	set p3.7 to digital input.
+    End Port_Init()
+
+    void SMB_Init()
+        set SCL to 100KHz
+	Enable SMBus
+    End SMB_Init()
+
+    void XBR0_Init()
+        configure the crossbar as directed in the labor manual.
+    End XBR0_Init()
+
+    void Interrupt_Init()
+        Enable general interrupt
+        Enable PCA overflow interrupts
+    End Interrupt_Init()
+
+    void PCA_Init()
+        Enable SYSCLK/12 and enable interrupt.
+        Enable CCM0 16bit PWM
+        Enable PCA counter
+    End PCA_Init()
+
+    void PCA_ISR() __interrupt 9
+        Increment PCA_COUNTER to count the number of overflows
+        If PCA interrupt flag is set
+            Clear the overflow flag
+            Set PCA0 to PCA_START
+            if two overflow is done
+		set h_count to 0
+		set new_heading to 1
+        handle other PCA interrupt sources
+	increment count
+    End PCA_ISR() __interrupt 9
+
+    unsigned int ReadCompass()
+	unsigned char addr to 0xC0 for compass's address
+	unsigned char Data[2] that is an array with length of 2
+	unsigned int heading for returning degrees between 0 and 3599
+	read two byte starting at reg 2
+	set heading equals the combine of two values from reg 2
+	return heading in thenths degrees
+    End ReadCompass.
